@@ -6,4 +6,5 @@ A sample MLOps pipeline leveraging Spark for data processing, XGBoost for model 
 
 ## Requirements
 
-A CML Workspace on version 2.0.40 or above.
+* A CML Workspace on version 2.0.40 or above.
+* CML Runtime with Spark Add-On versions 3.2 or above.
