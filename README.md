@@ -1,8 +1,12 @@
-# CML XGBoost MLFlow
+# CML MLOps Banking Demo
 
 ## Objective
 
 A sample MLOps pipeline leveraging Spark for data processing, XGBoost for model training, MLFlow for model tracking and CML Model Endpoints for model inference.
+
+## Use Case
+
+In this scenario a financial institution is building an MLOps pipeline to identify fraudulent credit card transactions.  
 
 ## Requirements
 
