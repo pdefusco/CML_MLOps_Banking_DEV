@@ -54,10 +54,12 @@ class BankDataGen:
 
     '''Class to Generate Banking Data'''
 
-    def __init__(self, spark, username, storage):
+    def __init__(self, spark, username, dbname, storage, connectionName):
         self.spark = spark
         self.username = username
         self.storage = storage
+        self.dbname = dbname
+        self.connectionName = connectionName
 
 
     def bankDataGen(self, shuffle_partitions_requested = 5, partitions_requested = 2, data_rows = 10000):
@@ -95,7 +97,25 @@ class BankDataGen:
 
         return df
 
-    def saveToCloud(self, df):
+    def sparkConnection(self):
+        """
+        Method to create a Spark Connection using CML Data Connections
+        """
+
+        CONNECTION_NAME = self.connectionName
+
+        from pyspark import SparkContext
+        SparkContext.setSystemProperty('spark.executor.cores', '2')
+        SparkContext.setSystemProperty('spark.executor.memory', '4g')
+
+        import cml.data_v1 as cmldata
+        conn = cmldata.get_connection(CONNECTION_NAME)
+        spark = conn.get_spark_session()
+
+        return spark
+
+
+    def saveFileToCloud(self, df):
         """
         Method to save credit card transactions df as csv in cloud storage
         """
@@ -108,17 +128,38 @@ class BankDataGen:
         df.write.format("csv").mode('overwrite').save(STORAGE + "/bank_fraud_demo/" + USERNAME)
 
 
+    def createDatabase(self, dbname):
+        """
+        Method to create database before data generated is saved to new database and table
+        """
+
+        spark.sql("CREATE DATABASE IF NOT EXISTS {}".format(dbname))
+
+        print("SHOW DATABASES LIKE '{}'".format(dbname))
+        spark.sql("SHOW DATABASES LIKE '{}'".format(dbname)).show()
+
+
+    def createOrAppend(self, df):
+        """
+        Method to create or append data to the BANKING TRANSACTIONS table
+        The table is used to simulate batches of new data
+        The table is meant to be updated periodically as part of a CML Job
+        """
+
+        try:
+            df.writeTo("{0}.BANKING_TRANSACTIONS_{1}".format(dbname, username))\
+              .using("iceberg").tableProperty("write.format.default", "parquet").append()
+
+        except:
+            df.writeTo("{0}.BANKING_TRANSACTIONS_{1}".format(dbname, username))\
+                .using("iceberg").tableProperty("write.format.default", "parquet").createOrReplace()
+
+
 def main():
 
-    spark = SparkSession \
-            .builder \
-            .appName("bank-datagen") \
-            .getOrCreate()
-
-    dg = BankDataGen(spark, "pauldefusco", "s3a://goes-se-sandbox01")
+    dg = BankDataGen(spark, "pauldefusco", "BNK_MLOPS_DEMO", "s3a://goes-se-sandbox01", "")
     df = dg.bankDataGen()
-    dg.saveToCloud(df)
-
+    dg.createOrAppend(df, dbname, username)
 
 if __name__ == '__main__':
     main()
