@@ -42,6 +42,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from pyspark.sql.types import LongType, IntegerType, StringType
+from pyspark.sql import SparkSession
 import dbldatagen as dg
 import dbldatagen.distributions as dist
 from dbldatagen import FakerTextFactory, DataGenerator, fakerText
@@ -53,11 +54,16 @@ class BankDataGen:
 
     '''Class to Generate Banking Data'''
 
-    def __init__(self, spark, username):
+    def __init__(self, spark, username, storage):
         self.spark = spark
         self.username = username
+        self.storage = storage
+
 
     def bankDataGen(self, shuffle_partitions_requested = 5, partitions_requested = 2, data_rows = 10000):
+        """
+        Method to create credit card transactions in Spark Df
+        """
 
         # setup use of Faker
         FakerTextUS = FakerTextFactory(locale=['en_US'], providers=[bank])
@@ -89,18 +95,30 @@ class BankDataGen:
 
         return df
 
+    def saveToCloud(self, df):
+        """
+        Method to save credit card transactions df as csv in cloud storage
+        """
 
-def __main__():
+        STORAGE = self.storage
+        USERNAME = self.username
+
+        !hdfs dfs -mkdir $STORAGE/bnk_fraud_demo/$USERNAME
+
+        df.write.format("csv").mode('overwrite').save(STORAGE + "/bank_fraud_demo/" + USERNAME)
+
+
+def main():
 
     spark = SparkSession \
             .builder \
             .appName("bank-datagen") \
             .getOrCreate()
 
-    dg = BankDataGen(spark, "pauldefusco")
+    dg = BankDataGen(spark, "pauldefusco", "s3a://goes-se-sandbox01")
     df = dg.bankDataGen()
-    df.write.format("csv").mode('overwrite').save("/data/bank_fraud")
+    dg.saveToCloud(df)
 
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     main()
