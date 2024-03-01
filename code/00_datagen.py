@@ -54,15 +54,14 @@ class BankDataGen:
 
     '''Class to Generate Banking Data'''
 
-    def __init__(self, spark, username, dbname, storage, connectionName):
-        self.spark = spark
+    def __init__(self, username, dbname, storage, connectionName):
         self.username = username
         self.storage = storage
         self.dbname = dbname
         self.connectionName = connectionName
 
 
-    def bankDataGen(self, shuffle_partitions_requested = 5, partitions_requested = 2, data_rows = 10000):
+    def dataGen(self, spark, shuffle_partitions_requested = 5, partitions_requested = 2, data_rows = 10000):
         """
         Method to create credit card transactions in Spark Df
         """
@@ -71,12 +70,9 @@ class BankDataGen:
         FakerTextUS = FakerTextFactory(locale=['en_US'], providers=[bank])
 
         # partition parameters etc.
-        self.spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions_requested)
+        spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions_requested)
 
-        fakerDataspec = (DataGenerator(self.spark, rows=data_rows, partitions=partitions_requested)
-                    .withColumn("name", percentNulls=0.1, text=FakerTextUS("name") )
-                    .withColumn("address", text=FakerTextUS("address" ))
-                    .withColumn("email", text=FakerTextUS("ascii_company_email") )
+        fakerDataspec = (DataGenerator(spark, rows=data_rows, partitions=partitions_requested)
                     .withColumn("age", "decimal", minValue=10, maxValue=100, random=True)
                     .withColumn("credit_card_balance", "decimal", minValue=100, maxValue=30000, random=True)
                     .withColumn("bank_account_balance", "decimal", minValue=0.01, maxValue=100000, random=True)
@@ -97,19 +93,18 @@ class BankDataGen:
 
         return df
 
-    def sparkConnection(self):
+
+    def createSparkConnection(self):
         """
         Method to create a Spark Connection using CML Data Connections
         """
-
-        CONNECTION_NAME = self.connectionName
 
         from pyspark import SparkContext
         SparkContext.setSystemProperty('spark.executor.cores', '2')
         SparkContext.setSystemProperty('spark.executor.memory', '4g')
 
         import cml.data_v1 as cmldata
-        conn = cmldata.get_connection(CONNECTION_NAME)
+        conn = cmldata.get_connection(self.connectionName)
         spark = conn.get_spark_session()
 
         return spark
@@ -120,26 +115,21 @@ class BankDataGen:
         Method to save credit card transactions df as csv in cloud storage
         """
 
-        STORAGE = self.storage
-        USERNAME = self.username
-
-        !hdfs dfs -mkdir $STORAGE/bnk_fraud_demo/$USERNAME
-
-        df.write.format("csv").mode('overwrite').save(STORAGE + "/bank_fraud_demo/" + USERNAME)
+        df.write.format("csv").mode('overwrite').save(self.storage + "/bank_fraud_demo/" + self.username)
 
 
-    def createDatabase(self, dbname):
+    def createDatabase(self, spark):
         """
         Method to create database before data generated is saved to new database and table
         """
 
-        spark.sql("CREATE DATABASE IF NOT EXISTS {}".format(dbname))
+        spark.sql("CREATE DATABASE IF NOT EXISTS {}".format(self.dbname))
 
-        print("SHOW DATABASES LIKE '{}'".format(dbname))
-        spark.sql("SHOW DATABASES LIKE '{}'".format(dbname)).show()
+        print("SHOW DATABASES LIKE '{}'".format(self.dbname))
+        spark.sql("SHOW DATABASES LIKE '{}'".format(self.dbname)).show()
 
 
-    def createOrAppend(self, df):
+    def createOrReplace(self, df):
         """
         Method to create or append data to the BANKING TRANSACTIONS table
         The table is used to simulate batches of new data
@@ -147,19 +137,47 @@ class BankDataGen:
         """
 
         try:
-            df.writeTo("{0}.BANKING_TRANSACTIONS_{1}".format(dbname, username))\
+            df.writeTo("{0}.BANKING_TRANSACTIONS_{1}".format(self.dbname, self.username))\
               .using("iceberg").tableProperty("write.format.default", "parquet").append()
 
         except:
-            df.writeTo("{0}.BANKING_TRANSACTIONS_{1}".format(dbname, username))\
+            df.writeTo("{0}.BANKING_TRANSACTIONS_{1}".format(self.dbname, self.username))\
                 .using("iceberg").tableProperty("write.format.default", "parquet").createOrReplace()
+
+
+    def validateTable(self, spark):
+        """
+        Method to validate creation of table
+        """
+        print("SHOW TABLES FROM '{}'".format(self.dbname))
+        spark.sql("SHOW TABLES FROM {}".format(self.dbname)).show()
 
 
 def main():
 
-    dg = BankDataGen(spark, "pauldefusco", "BNK_MLOPS_DEMO", "s3a://goes-se-sandbox01", "")
-    df = dg.bankDataGen()
-    dg.createOrAppend(df, dbname, username)
+    USERNAME = "pauldefusco"
+    DBNAME = "BNK_MLOPS_DEMO"
+    STORAGE = "s3a://goes-se-sandbox01"
+    CONNECTION_NAME = "se-aw-mdl"
+
+    # Instantiate BankDataGen class
+    dg = BankDataGen(USERNAME, DBNAME, STORAGE, CONNECTION_NAME)
+
+    # Create CML Spark Connection
+    spark = dg.createSparkConnection()
+
+    # Create Banking Transactions DF
+    df = dg.dataGen(spark)
+
+    # Create Spark Database
+    dg.createDatabase(spark)
+
+    # Create Iceberg Table in Database
+    dg.createOrReplace(df)
+
+    # Validate Iceberg Table in Database
+    dg.validateTable(spark)
+
 
 if __name__ == '__main__':
     main()
