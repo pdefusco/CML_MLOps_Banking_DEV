@@ -100,7 +100,6 @@ experimentId, experimentRunId = getLatestExperimentInfo(EXPERIMENT_NAME)
 run = mlflow.get_run(experimentRunId)
 
 pd.DataFrame(data=[run.data.params], index=["Value"]).T
-
 pd.DataFrame(data=[run.data.metrics], index=["Value"]).T
 
 client = mlflow.tracking.MlflowClient()

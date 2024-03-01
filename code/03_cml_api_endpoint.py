@@ -57,7 +57,7 @@ class ModelDeployment():
         self.experimentName = experimentName
         self.experimentId = experimentId
 
-    def registerModelFromExperimentRun(modelName, experimentId, experimentRunId, modelPath, sessionId):
+    def registerModelFromExperimentRun(self, modelName, experimentId, experimentRunId, modelPath, sessionId):
         """
         Method to register a model from an Experiment Run
         This is an alternative to the mlflow method to register a model via the register_model parameter in the log_model method
@@ -84,7 +84,7 @@ class ModelDeployment():
 
         return api_response
 
-    def createPRDProject():
+    def createPRDProject(self):
         """
         Method to create a PRD Project
         """
@@ -100,7 +100,7 @@ class ModelDeployment():
 
         return api_response
 
-    def validatePRDProject(username):
+    def validatePRDProject(self, username):
         """
         Method to test successful project creation
         """
@@ -116,7 +116,7 @@ class ModelDeployment():
 
         return api_response
 
-    def createModel(projectId, modelName, modelId, description = "My Spark Clf"):
+    def createModel(self, projectId, modelName, modelId, description = "My Spark Clf"):
         """
         Method to create a model
         """
@@ -137,7 +137,7 @@ class ModelDeployment():
 
         return api_response
 
-    def createModelBuild(projectId, modelVersionId, modelCreationId):
+    def createModelBuild(self, projectId, modelVersionId, modelCreationId):
         """
         Method to create a Model build
         """
@@ -159,7 +159,7 @@ class ModelDeployment():
 
         return api_response
 
-    def createModelDeployment(modelBuildId, projectId, modelCreationId):
+    def createModelDeployment(self, modelBuildId, projectId, modelCreationId):
         """
         Method to deploy a model build
         """
@@ -196,7 +196,7 @@ deployment = ModelDeployment(client, projectId, username, experimentName, experi
 
 sessionId = secrets.token_hex(nbytes=4)
 modelPath = "artifacts"
-modelName = "FraudClassifier-" + username + "-" + sessionId
+modelName = "BankFraudClassifier-" + username + "-" + sessionId
 
 registeredModelResponse = deployment.registerModelFromExperimentRun(modelName, experimentId, experimentRunId, modelPath, sessionId)
 projectCreationResponse = deployment.createPRDProject()
@@ -212,17 +212,11 @@ createModelResponse = deployment.createModel(prdProjId, modelName, modelId)
 modelCreationId = createModelResponse.id
 
 createModelBuildResponse = deployment.createModelBuild(prdProjId, modelVersionId, modelCreationId)
-
 modelBuildId = createModelBuildResponse.id
 
 deployment.createModelDeployment(modelBuildId, prdProjId, modelCreationId)
 
 ## NOW TRY A REQUEST WITH THIS PAYLOAD!
 
-model_request = {"dataframe_split": {"columns": ["age", "credit_card_balance", "bank_account_balance", "mortgage_balance", "primary_loan_balance", "sec_bank_account_balance", "savings_account_balance", "sec_savings_account_balance", "secondary_loan_balance", "total_est_nworth", "college_loan_balance", "transaction_amount", "latitude", "longitude"],
-                                     "data":[[11.5, 20000.5, 3900.5, 14000.5, 2944.5, 3400.5, 12000.5, 29000.5, 1300.5, 15000.5, 10000.5, 2000.5, 90.5, 120.5]]}}
-
-#REMEMBER TO MAKE SURE ALL NUMBERS ARE FLOATS
-#model_request = {"dataframe_split": {"columns":["fixed acidity", "volatile acidity", "citric acid",
-#"residual sugar", "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density", "pH",
-#"sulphates", "alcohol"],"data":[[6.2, 0.66, 0.48, 1.2, 0.029, 29.1, 75.1, 0.98, 3.33, 0.39, 12.8]]}}
+model_request = {"dataframe_split": {"columns": ["age", "credit_card_balance", "bank_account_balance", "mortgage_balance", "sec_bank_account_balance", "savings_account_balance", "sec_savings_account_balance", "total_est_nworth", "primary_loan_balance", "secondary_loan_balance", "uni_loan_balance", "longitude", "latitude", "transaction_amount"],
+                                     "data":[[35.5, 20000.5, 3900.5, 14000.5, 2944.5, 3400.5, 12000.5, 29000.5, 1300.5, 15000.5, 10000.5, 2000.5, 90.5, 120.5]]}}
