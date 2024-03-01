@@ -89,7 +89,7 @@ class ModelDeployment():
         Method to create a PRD Project
         """
 
-        createProjRequest = {"name": "mlops_prd_prj", "template":"git", "git_url":"https://github.com/pdefusco/MLOps_CML_PRD_Proj.git"}
+        createProjRequest = {"name": "bnk_mlops_prd_prj", "template":"git", "git_url":"https://github.com/pdefusco/CML_MLOps_Banking_Demo_PRD.git"}
 
         try:
             # Create a new project
@@ -180,13 +180,12 @@ class ModelDeployment():
 
 
 client = cmlapi.default_client()
-
 client.list_projects()
 
 projectId = os.environ['CDSW_PROJECT_ID']
 username = os.environ["PROJECT_OWNER"]
+experimentName = "xgboost-bnk-fraud-pauldefusco-2024-03-01"
 
-experimentName = "MySparkMlClf"
 experimentId = mlflow.get_experiment_by_name(experimentName).experiment_id
 runsDf = mlflow.search_runs(experimentId, run_view_type=1)
 
@@ -196,22 +195,20 @@ experimentRunId = runsDf.iloc[-1]['run_id']
 deployment = ModelDeployment(client, projectId, username, experimentName, experimentId)
 
 sessionId = secrets.token_hex(nbytes=4)
-modelPath = "best-model"
-modelName = "SparkClf-" + username + "-" + sessionId
+modelPath = "artifacts"
+modelName = "FraudClassifier-" + username + "-" + sessionId
 
 registeredModelResponse = deployment.registerModelFromExperimentRun(modelName, experimentId, experimentRunId, modelPath, sessionId)
 projectCreationResponse = deployment.createPRDProject()
-apiResp = deployment.validatePRDProject(os.environ["PROJECT_OWNER"])
+apiResp = deployment.validatePRDProject(username)
 
 prdProjId = projectCreationResponse.id
 modelId = registeredModelResponse.model_id
 modelVersionId = registeredModelResponse.model_versions[0].model_version_id
-modelName = "SparkClf-" + username + "-" + sessionId
 
 registeredModelResponse.model_versions[0].model_version_id
 
 createModelResponse = deployment.createModel(prdProjId, modelName, modelId)
-
 modelCreationId = createModelResponse.id
 
 createModelBuildResponse = deployment.createModelBuild(prdProjId, modelVersionId, modelCreationId)

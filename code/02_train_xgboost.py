@@ -94,7 +94,7 @@ def getLatestExperimentInfo(experimentName):
 
     return experimentId, experimentRunId
 
-experimentId, experimentRunId = getLatestExperimentInfo(experimentName)
+experimentId, experimentRunId = getLatestExperimentInfo(EXPERIMENT_NAME)
 
 #Replace Experiment Run ID here:
 run = mlflow.get_run(experimentRunId)
