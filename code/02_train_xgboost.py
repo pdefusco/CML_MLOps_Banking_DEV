@@ -37,40 +37,40 @@
 # #  Author(s): Paul de Fusco
 #***************************************************************************/
 
-import os
-import warnings
-import sys
-import xgboost
+import os, warnings, sys, logging
 import mlflow
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score
 import mlflow.sklearn
-import logging
 from xgboost import XGBClassifier
-
 from datetime import date
+import cml.data_v1 as cmldata
+import pyspark.pandas as ps
 
-username = os.environ["PROJECT_OWNER"]
-date = date.today()
 
-experimentName = "xgboost-bnk-fraud-{0}-{1}".format(username, date)
+USERNAME = os.environ["PROJECT_OWNER"]
+DBNAME = "BNK_MLOPS_DEMO"
+STORAGE = "s3a://goes-se-sandbox01"
+CONNECTION_NAME = "se-aw-mdl"
+DATE = date.today()
+EXPERIMENT_NAME = "xgboost-bnk-fraud-{0}-{1}".format(USERNAME, DATE)
 
-mlflow.set_experiment(experimentName)
+mlflow.set_experiment(EXPERIMENT_NAME)
 
-df = pd.read_csv("/data/bank_fraud.csv")
+conn = cmldata.get_connection(CONNECTION_NAME)
+spark = conn.get_spark_session()
 
-X_train, X_test, y_train, y_test = train_test_split(
-    df.drop("fraud", axis=1), df["fraud"], test_size=0.3
-)
+df_from_sql = ps.read_table('{0}.BANKING_TRANSACTIONS_{1}'.format(DBNAME, USERNAME))
+df = df_from_sql.to_pandas()
+
+X_train, X_test, y_train, y_test = train_test_split(df.drop("fraud", axis=1), df["fraud"], test_size=0.3)
 
 with mlflow.start_run():
 
     model = XGBClassifier(use_label_encoder=False, eval_metric="logloss")
-
     model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
-
     y_pred = model.predict(X_test)
 
     accuracy = accuracy_score(y_test, y_pred)
@@ -84,18 +84,17 @@ with mlflow.start_run():
     mlflow.xgboost.log_model(model, artifact_path="artifacts")#, registered_model_name="my_xgboost_model"
 
 def getLatestExperimentInfo(experimentName):
-  """
-  Method to capture the latest Experiment Id and Run ID for the provided experimentName
-  """
-  experimentId = mlflow.get_experiment_by_name(experimentName).experiment_id
-  runsDf = mlflow.search_runs(experimentId, run_view_type=1)
-  experimentId = runsDf.iloc[-1]['experiment_id']
-  experimentRunId = runsDf.iloc[-1]['run_id']
+    """
+    Method to capture the latest Experiment Id and Run ID for the provided experimentName
+    """
+    experimentId = mlflow.get_experiment_by_name(experimentName).experiment_id
+    runsDf = mlflow.search_runs(experimentId, run_view_type=1)
+    experimentId = runsDf.iloc[-1]['experiment_id']
+    experimentRunId = runsDf.iloc[-1]['run_id']
 
-  return experimentId, experimentRunId
+    return experimentId, experimentRunId
 
 experimentId, experimentRunId = getLatestExperimentInfo(experimentName)
-
 
 #Replace Experiment Run ID here:
 run = mlflow.get_run(experimentRunId)
