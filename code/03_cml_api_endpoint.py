@@ -93,7 +93,7 @@ class ModelDeployment():
 
         try:
             # Create a new project
-            api_response = client.create_project(createProjRequest)
+            api_response = self.client.create_project(createProjRequest)
             pprint(api_response)
         except ApiException as e:
             print("Exception when calling CMLServiceApi->create_project: %s\n" % e)
@@ -109,7 +109,7 @@ class ModelDeployment():
             # Return all projects, optionally filtered, sorted, and paginated.
             search_filter = {"owner.username" : username}
             search = json.dumps(search_filter)
-            api_response = client.list_projects(search_filter=search)
+            api_response = self.client.list_projects(search_filter=search)
             #pprint(api_response)
         except ApiException as e:
             print("Exception when calling CMLServiceApi->list_projects: %s\n" % e)
@@ -130,7 +130,7 @@ class ModelDeployment():
 
         try:
             # Create a model.
-            api_response = client.create_model(CreateModelRequest, projectId)
+            api_response = self.client.create_model(CreateModelRequest, projectId)
             pprint(api_response)
         except ApiException as e:
             print("Exception when calling CMLServiceApi->create_model: %s\n" % e)
@@ -152,7 +152,7 @@ class ModelDeployment():
 
         try:
             # Create a model build.
-            api_response = client.create_model_build(CreateModelBuildRequest, projectId, modelCreationId)
+            api_response = self.client.create_model_build(CreateModelBuildRequest, projectId, modelCreationId)
             pprint(api_response)
         except ApiException as e:
             print("Exception when calling CMLServiceApi->create_model_build: %s\n" % e)
@@ -171,7 +171,7 @@ class ModelDeployment():
 
         try:
             # Create a model deployment.
-            api_response = client.create_model_deployment(CreateModelDeploymentRequest, projectId, modelCreationId, modelBuildId)
+            api_response = self.client.create_model_deployment(CreateModelDeploymentRequest, projectId, modelCreationId, modelBuildId)
             pprint(api_response)
         except ApiException as e:
             print("Exception when calling CMLServiceApi->create_model_deployment: %s\n" % e)
