@@ -77,7 +77,7 @@ class ModelDeployment():
 
         try:
             # Register a model.
-            api_response = client.create_registered_model(CreateRegisteredModelRequest)
+            api_response = self.client.create_registered_model(CreateRegisteredModelRequest)
             pprint(api_response)
         except ApiException as e:
             print("Exception when calling CMLServiceApi->create_registered_model: %s\n" % e)
